@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پڕۆگرامی زیندەزانی - تاقیکردنەوە</title>
+    <style>
+        body {
+            font-family: Tahoma, Arial, sans-serif;
+            background-color: #f3f4f6;
+            margin: 0;
+            padding: 20px;
+            color: #1f2937;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+        }
+        h2 {
+            font-size: 22px;
+            line-height: 1.6;
+            color: #111827;
+        }
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .option-btn {
+            background-color: #f9fafb;
+            border: 2px solid #e5e7eb;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            cursor: pointer;
+            text-align: right;
+            transition: all 0.2s ease;
+        }
+        .option-btn:hover {
+            background-color: #f3f4f6;
+            border-color: #d1d5db;
+        }
+        .option-btn:disabled {
+            cursor: not-allowed;
+        }
+        .correct {
+            background-color: #d1fae5 !important;
+            border-color: #10b981 !important;
+            color: #065f46;
+        }
+        .wrong {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #991b1b;
+        }
+        .explanation-box {
+            display: none;
+            margin-top: 25px;
+            padding: 20px;
+            background-color: #eff6ff;
+            border-right: 5px solid #3b82f6;
+            border-radius: 8px;
+            line-height: 1.7;
+        }
+        .explanation-title {
+            font-weight: bold;
+            color: #1d4ed8;
+            margin-bottom: 10px;
+        }
+        .next-btn {
+            display: none;
+            margin-top: 25px;
+            width: 100%;
+            background-color: #3b82f6;
+            color: white;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .next-btn:hover {
+            background-color: #2563eb;
+        }
+        .progress {
+            font-size: 14px;
+            color: #6b7280;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>زیندەزانی - پۆلی ١٢</h1>
+        <div id="progress-text" class="progress">پرسیاری 0 لە 0</div>
+    </div>
+
+    <div id="quiz-content">
+        <h2 id="question-text">پرسیارەکە لێرە باردەکرێت...</h2>
+        <div id="options-container" class="options-grid">
+            <!-- هەڵبژاردنەکان بە کۆد لێرە دروست دەکرێن -->
+        </div>
+
+        <div id="explanation-box" class="explanation-box">
+            <div class="explanation-title">ئیستیدلال (ڕوونکردنەوەی فیکرەکە):</div>
+            <div id="explanation-text"></div>
+        </div>
+
+        <button id="next-btn" class="next-btn" onclick="nextQuestion()">پرسیاری دواتر</button>
+    </div>
+</div>
+
+<script>
+    let questions = [];
+    let currentQuestionIndex = 0;
+
+    // ڕاکێشانی پرسیارەکان لە فایلی داتابەیسەوە
+    fetch('questions.json')
+        .then(response => response.json())
+        .then(data => {
+            questions = data;
+            loadQuestion();
+        })
+        .catch(error => {
+            document.getElementById('question-text').innerText = "کێشەیەک هەیە لە بارکردنی پرسیارەکان. دڵنیابە فایلی questions.json بوونی هەیە.";
+        });
+
+    function loadQuestion() {
+        const currentQuestion = questions[currentQuestionIndex];
+        
+        // نوێکردنەوەی ژمارەی پرسیارەکە
+        document.getElementById('progress-text').innerText = `پرسیاری ${currentQuestionIndex + 1} لە ${questions.length}`;
+        
+        // دانانی دەقی پرسیارەکە
+        document.getElementById('question-text').innerText = currentQuestion.question;
+        
+        // خاوێنکردنەوەی شوێنی هەڵبژاردنەکان و شاردنەوەی ئیستیدلال
+        const optionsContainer = document.getElementById('options-container');
+        optionsContainer.innerHTML = '';
+        document.getElementById('explanation-box').style.display = 'none';
+        document.getElementById('next-btn').style.display = 'none';
+
+        // دروستکردنی دوگمە بۆ هەر هەڵبژاردەیەک
+        currentQuestion.options.forEach(optionText => {
+            const button = document.createElement('button');
+            button.className = 'option-btn';
+            button.innerText = optionText;
+            button.onclick = () => selectAnswer(button, optionText, currentQuestion.correctAnswer, currentQuestion.explanation);
+            optionsContainer.appendChild(button);
+        });
+    }
+
+    function selectAnswer(selectedBtn, selectedText, correctText, explanationText) {
+        const allButtons = document.querySelectorAll('.option-btn');
+        
+        // سڕکردنی هەموو دوگمەکان بۆ ئەوەی تەنیا یەکجار کرتە بکرێت
+        allButtons.forEach(btn => btn.disabled = true);
+
+        // پشکنینی وەڵامەکە
+        if (selectedText === correctText) {
+            selectedBtn.classList.add('correct');
+        } else {
+            selectedBtn.classList.add('wrong');
+            // دۆزینەوەی وەڵامە ڕاستەکە و سەوزکردنی
+            allButtons.forEach(btn => {
+                if (btn.innerText === correctText) {
+                    btn.classList.add('correct');
+                }
+            });
+        }
+
+        // نیشاندانی ئیستیدلال (ڕوونکردنەوە)
+        document.getElementById('explanation-text').innerText = explanationText;
+        document.getElementById('explanation-box').style.display = 'block';
+
+        // نیشاندانی دوگمەی "پرسیاری دواتر" ئەگەر پرسیار مابوو
+        if (currentQuestionIndex < questions.length - 1) {
+            document.getElementById('next-btn').style.display = 'block';
+        } else {
+            const nextBtn = document.getElementById('next-btn');
+            nextBtn.innerText = "کۆتایی تاقیکردنەوەکە";
+            nextBtn.style.display = 'block';
+            nextBtn.onclick = () => alert("ئافەرین! سەرجەم پرسیارەکانت تەواو کرد.");
+        }
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        loadQuestion();
+    }
+</script>
+
+</body>
+</html>
